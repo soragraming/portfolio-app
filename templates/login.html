@@ -1,0 +1,10 @@
+{% extends "layout.html" %} {% block content %}
+<h2>ログイン</h2>
+<form method="POST">
+  <label>ユーザー名:</label><br />
+  <input type="text" name="username" /><br /><br />
+  <label>パスワード:</label><br />
+  <input type="password" name="password" /><br /><br />
+  <button type="submit">ログイン</button>
+</form>
+{% endblock %}

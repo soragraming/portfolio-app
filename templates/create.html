@@ -1,0 +1,58 @@
+{% extends "layout.html" %} {% block title %}{% endblock %} {% block content %}
+<h1>登山・キャンプの記録を追加</h1>
+
+<form action="/create" method="POST" enctype="multipart/form-data">
+  <label>タイトル:</label><br />
+  <input type="text" name="title" required /><br /><br />
+
+  <label>日付:</label><br />
+  <input type="date" name="date" /><br /><br />
+
+  <label>場所:</label><br />
+  <input type="text" name="address" /><br /><br />
+  <h3>マップ参考表示（例）</h3>
+  <div class="map-sample">
+    <iframe
+      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d27155.586803845297!2d130.78107250000002!3d31.7036455!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x353efb234d8ae173%3A0x16e184c166b8be3a!2z5Zu95YiG44Kt44Oj44Oz44OX5rW35rC05rW05aC0!5e0!3m2!1sja!2sjp!4v1743517090582!5m2!1sja!2sjp"
+      width="100%"
+      height="300"
+      style="border: 0"
+      allowfullscreen=""
+      loading="lazy"
+      referrerpolicy="no-referrer-when-downgrade"
+    ></iframe>
+  </div>
+
+  <br />
+
+  <label>Googleマップ埋め込みURL（iframe）:</label><br />
+  <p style="font-size: 0.9em">
+    🔗 Googleマップの埋め込みURLの取得方法：<br />
+    1.
+    <a href="https://www.google.co.jp/maps" target="_blank">Googleマップ</a>
+    で目的地を検索<br />
+    2. 画面左の「共有」→「地図を埋め込む」タブをクリック<br />
+    3. 「HTML をコピー」で iframeコードを取得<br />
+    4. この下の入力欄にペーストしてください
+  </p>
+
+  <textarea
+    name="map_iframe"
+    rows="4"
+    cols="60"
+    placeholder="ここにGoogleマップのiframeコードを貼ってね！"
+  ></textarea
+  ><br /><br />
+
+  <label>感想・メモ:</label><br />
+  <textarea name="description" rows="5" cols="40"></textarea><br /><br />
+
+  <label>写真を選択:</label><br />
+  <input type="file" name="photos" multiple /><br /><br />
+
+  <button type="submit">投稿する</button>
+</form>
+
+<br />
+<a href="/">トップに戻る</a>
+{% endblock %}

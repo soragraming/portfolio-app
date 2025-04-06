@@ -1,0 +1,35 @@
+{% extends "layout.html" %} {% block title %}{{ post.title }}{% endblock %} {%
+block content %}
+<h2>{{ post.title }}</h2>
+<p><strong>投稿者:</strong> {{ post.user.username }}</p>
+
+<hr />
+<a href="{{ url_for('edit_post', post_id=post.id) }}">📝 編集</a> |
+<a
+  href="{{ url_for('delete_post', post_id=post.id) }}"
+  onclick="return confirm('本当に削除しますか？');"
+  >🗑 削除</a
+>
+
+<p><strong>日付:</strong> {{ post.date }}</p>
+<p><strong>場所:</strong> {{ post.address }}</p>
+<p><strong>感想:</strong><br />{{ post.description }}</p>
+
+{% if post.photos %}
+<h3>写真</h3>
+<div class="photo-gallery">
+  {% for photo in post.photos %}
+  <img
+    src="{{ url_for('static', filename='uploads/' + photo.photo_path) }}"
+    width="400"
+  /><br /><br />
+  {% endfor %}
+</div>
+{% endif %} {% if post.map_iframe %}
+<h3>地図</h3>
+<div class="map-container">{{ post.map_iframe | safe }}</div>
+
+{% endif %}
+
+<a href="/">← 一覧に戻る</a>
+{% endblock %}

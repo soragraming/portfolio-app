@@ -1,0 +1,13 @@
+{% extends "layout.html" %} {% block title %}{{ post.title }}{% endblock %} {%
+block content %}
+<h1>キャンプ記録</h1>
+<p>ここでは、楽しかったキャンプの思い出を紹介します。</p>
+<p>自然の中で過ごした時間や焚き火の温もりを忘れられません。</p>
+<img
+  src="{{ url_for('static', filename='images/camping_night.jpg') }}"
+  alt="夜空とテントのキャンプ写真"
+  width="600"
+/>
+
+<a href="/">トップページに戻る</a>
+{% endblock %}

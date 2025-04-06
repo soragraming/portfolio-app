@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Google Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c&family=Roboto&display=swap"
+      rel="stylesheet"
+    />
+
+    <title>{% block title %}My Portfolio{% endblock %}</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    <header>
+      <h1><a href="/">登山・キャンプ記録アプリ</a></h1>
+      <nav>
+        {% if current_user.is_authenticated %} ようこそ {{ current_user.username
+        }} さん！
+        <a href="{{ url_for('logout') }}">ログアウト</a>
+        {% else %}
+        <a href="{{ url_for('login') }}">ログイン</a> |
+        <a href="{{ url_for('register') }}">新規登録</a>
+        {% endif %}
+      </nav>
+
+      <nav class="nav-links">
+        <a href="/">ホーム</a>
+        <a href="/create">新規投稿</a>
+        <a href="/profile">プロフィール</a>
+        <a href="/logs">学習ログ</a>
+      </nav>
+
+      <hr />
+    </header>
+
+    <main>
+      {% block content %}
+      <!-- 各ページの中身がここに差し込まれる！ -->
+      {% endblock %}
+    </main>
+
+    <footer style="text-align: center; padding: 20px; color: #888">
+      &copy; 2025 Ikeda Ozora. All Rights Reserved.
+    </footer>
+  </body>
+</html>
