@@ -250,13 +250,13 @@ def load_user(user_id):
 
 
 # ✅ 最後に Flask アプリ起動。おまじないのようなもの
-# 先にアプリの設定（最上部）やルート定義（ルーティング）が必要
-# ✅ db.create_all() を常に実行するよう変更（安全）
 with app.app_context():
     db.create_all()
 
-# 本番では app.run() は書かない
+# --- Flask アプリの起動（Renderでは不要）---
 # if __name__ == '__main__':
+#     with app.app_context():
+#         db.create_all()
 #     app.run(debug=True, port=5001)
 
 
