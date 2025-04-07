@@ -8,20 +8,41 @@ from sqlalchemy.orm import relationship
 from flask import abort
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
+from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import uuid
-
-
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_1234'  # ← 適当に英数字でOK
+
+# シリアライザーの設定（アプリのどこかで）
+serializer = URLSafeTimedSerializer(app.secret_key)
 
 # データベースの設定
 basedir = os.path.abspath(os.path.dirname(__file__))
 db_path = os.path.join(basedir, 'app.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# メールアドレス登録設定
+# app.config['MAIL_SERVER'] = 'smtp.gmail.com'  # 例：Gmail
+# app.config['MAIL_PORT'] = 587
+# app.config['MAIL_USE_TLS'] = True
+# app.config['MAIL_USERNAME'] = 'ohzora0817@gmail.com'  # 自分のGmailアドレス
+# app.config['MAIL_PASSWORD'] = 'fuus egdn rpwm ygam'# アプリパスワード
+# app.config['MAIL_DEFAULT_SENDER'] = 'ohzora0817@gmail.com'# 自分のGmailアドレス
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True') == 'True'
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
+
+mail = Mail(app)
 
 db = SQLAlchemy(app)
 
@@ -30,21 +51,21 @@ db = SQLAlchemy(app)
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
+    is_confirmed = db.Column(db.Boolean, default=False) 
     posts = db.relationship('Post', backref='author', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
-    
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-    
+
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 posts = db.relationship('Post', backref='author', lazy=True)
-
-
 
 class Post(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -120,6 +141,7 @@ def camping():
 def register():
     if request.method == 'POST':
         username = request.form['username']
+        email = request.form['email']
         password = request.form['password']
 
         # 同じユーザー名が登録済みかチェック
@@ -128,14 +150,42 @@ def register():
             return "このユーザー名はすでに使われています！"
 
         # 新規ユーザー作成
-        new_user = User(username=username)
+        new_user = User(username=username, email=email)
         new_user.set_password(password)
-
         db.session.add(new_user)
         db.session.commit()
+        
+        # メール認証リンクを作成
+        token = serializer.dumps(new_user.email, salt='email-confirm')
+        confirm_url = url_for('confirm_email', token=token, _external=True)
+        
+        # メール本文
+        msg = Message('メールアドレス認証', sender='あなたのメールアドレス', recipients=[new_user.email])
+        msg.body = f'こちらのリンクから認証を完了してください: {confirm_url}'
+        mail.send(msg)
         return redirect(url_for('login'))  # 登録後はログインページへリダイレクト
 
     return render_template('register.html')
+
+# メール認証のルート
+@app.route('/confirm/<token>')
+def confirm_email(token):
+    try:
+        email = serializer.loads(token, salt='email-confirm', max_age=3600)  # 1時間有効
+    except SignatureExpired:
+        return "確認リンクの有効期限が切れています。"
+    except BadSignature:
+        return "無効な確認リンクです。"
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return "ユーザーが見つかりません。"
+
+    if not user.is_confirmed:
+        user.is_confirmed = True
+        db.session.commit()
+
+    return "メール認証が完了しました！ログインできます。"
 
 
 # 入力(タイトルや日付)を受けて、データベースに保存する
@@ -226,13 +276,18 @@ def login():
         username = request.form['username']
         password = request.form['password']
         user = User.query.filter_by(username=username).first()
-        if user and user.check_password(password):
-            login_user(user)
-            return redirect(url_for('home'))
-        else:
-            return "ログイン失敗！"
+
+        if user:
+            if not user.is_confirmed:
+                return "メール認証がまだ完了していません！"
+            if user.check_password(password):
+                login_user(user)
+                return redirect(url_for('home'))
+
+        return "ログイン失敗！"
 
     return render_template('login.html')
+
 
 
 @app.route('/logout')
@@ -244,9 +299,6 @@ def logout():
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
-
-
-
 
 
 # ✅ 最後に Flask アプリ起動。おまじないのようなもの
