@@ -1,3 +1,7 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
@@ -10,14 +14,10 @@ from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
-
-import os
-from dotenv import load_dotenv
-load_dotenv()
 import uuid
 
 app = Flask(__name__)
-app.secret_key = 'super_secret_1234'  # ← 適当に英数字でOK
+app.secret_key = os.environ.get('SECRET_KEY') # ← 適当に英数字でOK
 
 # シリアライザーの設定（アプリのどこかで）
 serializer = URLSafeTimedSerializer(app.secret_key)
@@ -29,18 +29,13 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # メールアドレス登録設定
-# app.config['MAIL_SERVER'] = 'smtp.gmail.com'  # 例：Gmail
-# app.config['MAIL_PORT'] = 587
-# app.config['MAIL_USE_TLS'] = True
-# app.config['MAIL_USERNAME'] = 'ohzora0817@gmail.com'  # 自分のGmailアドレス
-# app.config['MAIL_PASSWORD'] = 'fuus egdn rpwm ygam'# アプリパスワード
-# app.config['MAIL_DEFAULT_SENDER'] = 'ohzora0817@gmail.com'# 自分のGmailアドレス
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER')
-app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True') == 'True'
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT'))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS') == 'True'
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
+
 
 mail = Mail(app)
 
@@ -65,10 +60,8 @@ class User(db.Model, UserMixin):
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-posts = db.relationship('Post', backref='author', lazy=True)
 
 class Post(db.Model):
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
@@ -139,33 +132,57 @@ def camping():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        password = request.form['password']
+    try:
+        if request.method == 'POST':
+            username = request.form['username']
+            email = request.form['email']
+            password = request.form['password']
 
-        # 同じユーザー名が登録済みかチェック
-        existing_user = User.query.filter_by(username=username).first()
-        if existing_user:
-            return "このユーザー名はすでに使われています！"
+            # 同じユーザー名が登録済みかチェック
+            existing_user = User.query.filter_by(username=username).first()
+            if existing_user:
+                return "このユーザー名はすでに使われています！"
 
-        # 新規ユーザー作成
-        new_user = User(username=username, email=email)
-        new_user.set_password(password)
-        db.session.add(new_user)
-        db.session.commit()
-        
-        # メール認証リンクを作成
-        token = serializer.dumps(new_user.email, salt='email-confirm')
-        confirm_url = url_for('confirm_email', token=token, _external=True)
-        
-        # メール本文
-        msg = Message('メールアドレス認証', sender='あなたのメールアドレス', recipients=[new_user.email])
-        msg.body = f'こちらのリンクから認証を完了してください: {confirm_url}'
-        mail.send(msg)
-        return redirect(url_for('login'))  # 登録後はログインページへリダイレクト
+            # 新規ユーザー作成
+            new_user = User(username=username, email=email)
+            new_user.set_password(password)
+            db.session.add(new_user)
+            db.session.commit()
+            print("✅ 新規ユーザー作成:", username, email)
 
-    return render_template('register.html')
+            token = serializer.dumps(new_user.email, salt='email-confirm')
+            confirm_url = url_for('confirm_email', token=token, _external=True)
+
+            print("✅ 確認リンク生成:", confirm_url)
+
+            msg = Message(
+                subject='メールアドレス認証',
+                sender=app.config['MAIL_DEFAULT_SENDER'],
+                recipients=[new_user.email])
+            msg.body = f'こちらのリンクから認証を完了してください: {confirm_url}'
+
+            print("✅ メール送信直前")
+            mail.send(msg)
+            print("✅ メール送信完了")
+
+            # # メール認証リンクを作成
+            # token = serializer.dumps(new_user.email, salt='email-confirm')
+            # confirm_url = url_for('confirm_email', token=token, _external=True)
+
+            # # メール本文
+            # msg = Message('メールアドレス認証', recipients=[new_user.email])
+            # msg.body = f'こちらのリンクから認証を完了してください: {confirm_url}'
+            # mail.send(msg)
+
+            return redirect(url_for('login'))  # 登録後はログインページへリダイレクト
+
+        return render_template('register.html')
+    except Exception as e:
+        import traceback
+        print("⚠️ 登録時のエラー:", e)
+        traceback.print_exc()
+        return "サーバーエラーが発生しました", 500
+
 
 # メール認証のルート
 @app.route('/confirm/<token>')
@@ -295,6 +312,22 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('home'))
+
+@app.route('/test-mail')
+@login_required
+def test_mail():
+    try:
+        msg = Message(
+            subject="テストメール",
+            sender=app.config['MAIL_DEFAULT_SENDER'],  # ここがSendGridでVerify済アドレス
+            recipients=["ohzora0817@gmail.com"]  # ← 登録済アドレスと一致してる必要あり！
+        )
+        msg.body = "これはテストメールです。"
+        mail.send(msg)
+        return "✅ メール送信成功！"
+    except Exception as e:
+        return f"❌ エラー: {str(e)}"
+
 
 @login_manager.user_loader
 def load_user(user_id):
