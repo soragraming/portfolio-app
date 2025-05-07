@@ -156,9 +156,9 @@ def register():
             print("✅ 確認リンク生成:", confirm_url)
 
             msg = Message(
-                subject='メールアドレス認証',
-                sender=app.config['MAIL_DEFAULT_SENDER'],
-                recipients=[new_user.email])
+               subject="メールアドレス認証",
+               sender=(u"Portfolio App", app.config['MAIL_DEFAULT_SENDER']),  # ← 名前付きにしてみる
+               recipients=[new_user.email])
             msg.body = f'こちらのリンクから認証を完了してください: {confirm_url}'
 
             print("✅ メール送信直前")
