@@ -101,12 +101,6 @@ profile_info = {
     'skills': ['Python', 'JavaScript', 'HTML', 'CSS'],
 }
 
-learning_logs = [
-    {'date': '2025-03-01', 'topic': 'Flask Basics', 'progress': 'Learned the basics of Flask and created a simple app.'},
-    {'date': '2025-03-02', 'topic': 'CSS Styling', 'progress': 'Worked on styling my portfolio with CSS.'},
-    {'date': '2025-03-03', 'topic': 'GitHub', 'progress': 'Started using GitHub for version control and pushing code.'},
-]
-
 # ✅ ルーティング
 
 @app.route('/')
@@ -114,21 +108,6 @@ def home():
     posts = Post.query.order_by(Post.date.desc()).all()
     return render_template('index.html', posts=posts)
 # ホームにアクセスしたら'index.html'を表示する　以下同義
-@app.route('/profile')
-def profile():
-    return render_template('profile.html', profile=profile_info)
-
-@app.route('/logs')
-def logs():
-    return render_template('logs.html', logs=learning_logs)
-
-@app.route('/hiking')
-def hiking():
-    return render_template('hiking.html')
-
-@app.route('/camping')
-def camping():
-    return render_template('camping.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():

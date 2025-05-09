@@ -42,8 +42,6 @@
           <button class="text-white md:hidden" onclick="toggleMenu()">☰</button>
 
           <div id="nav-links" class="hidden md:flex space-x-4 text-white">
-            <a href="{{ url_for('profile') }}">プロフィール</a>
-            <a href="{{ url_for('logs') }}">学習ログ</a>
             <a href="{{ url_for('create') }}">新規投稿</a>
             {% if current_user.is_authenticated %}
             <a href="{{ url_for('logout') }}">ログアウト</a>
@@ -58,8 +56,6 @@
           id="mobile-menu"
           class="md:hidden hidden mt-2 space-y-2 text-white text-center"
         >
-          <a href="{{ url_for('profile') }}" class="block">プロフィール</a>
-          <a href="{{ url_for('logs') }}" class="block">学習ログ</a>
           <a href="{{ url_for('create') }}" class="block">新規投稿</a>
           {% if current_user.is_authenticated %}
           <a href="{{ url_for('logout') }}" class="block">ログアウト</a>
