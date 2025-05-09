@@ -174,7 +174,7 @@ def register():
             # msg.body = f'こちらのリンクから認証を完了してください: {confirm_url}'
             # mail.send(msg)
 
-            return redirect(url_for('login'))  # 登録後はログインページへリダイレクト
+            return render_template('confirm_sent.html')  # 認証用メールを送りました！を表示
 
         return render_template('register.html')
     except Exception as e:
