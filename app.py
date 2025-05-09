@@ -181,7 +181,7 @@ def confirm_email(token):
         user.is_confirmed = True
         db.session.commit()
 
-    return "メール認証が完了しました！ログインできます。"
+    return render_template('confirm_done.html')
 
 
 # 入力(タイトルや日付)を受けて、データベースに保存する
