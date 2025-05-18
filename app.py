@@ -23,10 +23,24 @@ app.secret_key = os.environ.get('SECRET_KEY') # ← 適当に英数字でOK
 serializer = URLSafeTimedSerializer(app.secret_key)
 
 # データベースの設定
+db = SQLAlchemy(app)
 basedir = os.path.abspath(os.path.dirname(__file__))
 db_path = os.path.join(basedir, 'app.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+post_tags = db.Table('post_tags',
+    db.Column('post_id', db.Integer, db.ForeignKey('post.id'), primary_key=True),
+    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True)
+)
+class Tag(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    posts = db.relationship('Post', secondary=post_tags, back_populates='tags')
+admin.add_view(ModelView(Tag, db.session))
+with app.app_context():
+    db.create_all()
+
+
 
 # メールアドレス登録設定
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER')
@@ -36,10 +50,7 @@ app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
 
-
 mail = Mail(app)
-
-db = SQLAlchemy(app)
 
 # ✅ モデル定義（先に書く！）
 
@@ -74,7 +85,7 @@ class Post(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user = db.relationship('User')
-
+    tags = db.relationship('Tag', secondary=post_tags, back_populates='posts')
     photos = db.relationship('Photo', backref='post', cascade="all, delete", lazy=True)
 
 class Photo(db.Model):
@@ -207,6 +218,16 @@ def create():
             map_iframe=map_iframe,
             user_id=current_user.id,  # ← 現在ログイン中のユーザーのIDを紐づける！
         )
+        
+                # --- タグ処理ここから ---
+        tag_list = [name.strip() for name in tag_names.split(',') if name.strip()]
+        for name in tag_list:
+            tag = Tag.query.filter_by(name=name).first()
+            if not tag:
+                tag = Tag(name=name)
+                db.session.add(tag)
+            new_post.tags.append(tag)
+        # --- タグ処理ここまで ---
 
         db.session.add(new_post)
         db.session.commit()
