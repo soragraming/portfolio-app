@@ -2,14 +2,12 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, abort
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, LoginManager, login_user, login_required, logout_user, current_user
-from sqlalchemy.orm import relationship
-from flask import abort
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 from flask_mail import Mail, Message
@@ -17,32 +15,18 @@ from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 import uuid
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY') # ← 適当に英数字でOK
+app.secret_key = os.environ.get('SECRET_KEY')
 
-# シリアライザーの設定（アプリのどこかで）
 serializer = URLSafeTimedSerializer(app.secret_key)
 
-# データベースの設定
-db = SQLAlchemy(app)
+# DB設定
 basedir = os.path.abspath(os.path.dirname(__file__))
 db_path = os.path.join(basedir, 'app.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-post_tags = db.Table('post_tags',
-    db.Column('post_id', db.Integer, db.ForeignKey('post.id'), primary_key=True),
-    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True)
-)
-class Tag(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), unique=True, nullable=False)
-    posts = db.relationship('Post', secondary=post_tags, back_populates='tags')
-admin.add_view(ModelView(Tag, db.session))
-with app.app_context():
-    db.create_all()
+db = SQLAlchemy(app)
 
-
-
-# メールアドレス登録設定
+# メール設定
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER')
 app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT'))
 app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS') == 'True'
@@ -52,14 +36,19 @@ app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
 
 mail = Mail(app)
 
-# ✅ モデル定義（先に書く！）
+# 多対多用の中間テーブル
+post_tags = db.Table('post_tags',
+    db.Column('post_id', db.Integer, db.ForeignKey('post.id'), primary_key=True),
+    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True)
+)
 
+# モデル定義
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    is_confirmed = db.Column(db.Boolean, default=False) 
+    is_confirmed = db.Column(db.Boolean, default=False)
     posts = db.relationship('Post', backref='author', lazy=True)
 
     def set_password(self, password):
@@ -67,12 +56,8 @@ class User(db.Model, UserMixin):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-
 class Post(db.Model):
+    __tablename__ = 'post'
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
@@ -84,9 +69,14 @@ class Post(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    user = db.relationship('User')
     tags = db.relationship('Tag', secondary=post_tags, back_populates='posts')
     photos = db.relationship('Photo', backref='post', cascade="all, delete", lazy=True)
+    
+
+class Tag(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    posts = db.relationship('Post', secondary=post_tags, back_populates='tags')
 
 class Photo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -94,26 +84,27 @@ class Photo(db.Model):
     photo_path = db.Column(db.String(200), nullable=False)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-# adminはモデル定義のあと！
+# 管理画面
 admin = Admin(app, name='管理画面', template_mode='bootstrap3')
-
-class UserAdmin(ModelView):
-    column_list = ['id', 'username']
-    form_excluded_columns = ['password_hash']
-
-admin.add_view(UserAdmin(User, db.session))
-admin.add_view(ModelView(Post, db.session))
+admin.add_view(ModelView(User, db.session))
 admin.add_view(ModelView(Photo, db.session))
+admin.add_view(ModelView(Tag, db.session))
 
-# ✅ サンプルデータ（プロフィール・学習ログ）
-profile_info = {
-    'name': '池田　大空',
-    'age': 30,
-    'skills': ['Python', 'JavaScript', 'HTML', 'CSS'],
-}
+# ログイン設定
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    app.run(debug=True)
 
 # ✅ ルーティング
-
 @app.route('/')
 def home():
     posts = Post.query.order_by(Post.date.desc()).all()
@@ -209,6 +200,7 @@ def create():
         address = request.form['address']
         description = request.form['description']
         map_iframe = request.form.get('map_iframe')
+        tag_names = request.form.get('tags', '')
 
         new_post = Post(
             title=title,
@@ -218,8 +210,7 @@ def create():
             map_iframe=map_iframe,
             user_id=current_user.id,  # ← 現在ログイン中のユーザーのIDを紐づける！
         )
-        
-                # --- タグ処理ここから ---
+         # --- タグ処理ここから ---
         tag_list = [name.strip() for name in tag_names.split(',') if name.strip()]
         for name in tag_list:
             tag = Tag.query.filter_by(name=name).first()
@@ -328,6 +319,10 @@ def test_mail():
     except Exception as e:
         return f"❌ エラー: {str(e)}"
 
+@app.route('/')
+def home():
+    posts = Post.query.order_by(Post.date.desc()).all()
+    return render_template('index.html', posts=posts)
 
 @login_manager.user_loader
 def load_user(user_id):
