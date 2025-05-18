@@ -319,11 +319,6 @@ def test_mail():
     except Exception as e:
         return f"❌ エラー: {str(e)}"
 
-@app.route('/')
-def home():
-    posts = Post.query.order_by(Post.date.desc()).all()
-    return render_template('index.html', posts=posts)
-
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
