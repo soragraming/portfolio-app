@@ -13,8 +13,10 @@ from flask_admin.contrib.sqla import ModelView
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 import uuid
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates')
 app.secret_key = os.environ.get('SECRET_KEY')
 
 serializer = URLSafeTimedSerializer(app.secret_key)
@@ -42,6 +44,12 @@ post_tags = db.Table('post_tags',
     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True)
 )
 
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
 # モデル定義
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -49,7 +57,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     is_confirmed = db.Column(db.Boolean, default=False)
-    posts = db.relationship('Post', backref='author', lazy=True)
+    posts = db.relationship('Post', backref='author', lazy=True,cascade="all, delete-orphan")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -66,12 +74,12 @@ class Post(db.Model):
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
     map_iframe = db.Column(db.Text)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     tags = db.relationship('Tag', secondary=post_tags, back_populates='posts')
     photos = db.relationship('Photo', backref='post', cascade="all, delete", lazy=True)
-    
+
 
 class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -89,6 +97,7 @@ admin = Admin(app, name='管理画面', template_mode='bootstrap3')
 admin.add_view(ModelView(User, db.session))
 admin.add_view(ModelView(Photo, db.session))
 admin.add_view(ModelView(Tag, db.session))
+admin.add_view(ModelView(Post, db.session))
 
 # ログイン設定
 login_manager = LoginManager()
@@ -99,10 +108,6 @@ login_manager.login_view = 'login'
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True)
 
 # ✅ ルーティング
 @app.route('/')
@@ -120,9 +125,12 @@ def register():
             password = request.form['password']
 
             # 同じユーザー名が登録済みかチェック
-            existing_user = User.query.filter_by(username=username).first()
+            # app.py の register関数内で
+            existing_user = User.query.filter_by(email=email).first()
             if existing_user:
-                return "このユーザー名はすでに使われています！"
+                flash("このメールアドレスは既に登録されています。ログインを試してください。", "error")
+                return redirect(url_for('register'))
+
 
             # 新規ユーザー作成
             new_user = User(username=username, email=email)
@@ -138,7 +146,7 @@ def register():
 
             msg = Message(
                subject="メールアドレス認証",
-               sender=(u"Portfolio App", app.config['MAIL_DEFAULT_SENDER']),  # ← 名前付きにしてみる
+               sender=(u"Portfolio App", app.config['MAIL_DEFAULT_SENDER']),
                recipients=[new_user.email])
             msg.body = f'こちらのリンクから認証を完了してください: {confirm_url}'
 
@@ -146,16 +154,7 @@ def register():
             mail.send(msg)
             print("✅ メール送信完了")
 
-            # # メール認証リンクを作成
-            # token = serializer.dumps(new_user.email, salt='email-confirm')
-            # confirm_url = url_for('confirm_email', token=token, _external=True)
-
-            # # メール本文
-            # msg = Message('メールアドレス認証', recipients=[new_user.email])
-            # msg.body = f'こちらのリンクから認証を完了してください: {confirm_url}'
-            # mail.send(msg)
-
-            return render_template('confirm_sent.html')  # 認証用メールを送りました！を表示
+            return render_template('confirm_sent_mail.html')  # 認証用メールを送りました！を表示
 
         return render_template('register.html')
     except Exception as e:
@@ -208,7 +207,7 @@ def create():
             address=address,
             description=description,
             map_iframe=map_iframe,
-            user_id=current_user.id,  # ← 現在ログイン中のユーザーのIDを紐づける！
+            user_id=current_user.id  # ← 現在ログイン中のユーザーのIDを紐づける！
         )
          # --- タグ処理ここから ---
         tag_list = [name.strip() for name in tag_names.split(',') if name.strip()]
@@ -245,6 +244,13 @@ def create():
 def post_detail(post_id):
     post = Post.query.get_or_404(post_id)
     return render_template('post_detail.html', post=post)
+
+@app.route('/tag/<tag_name>')
+def tag_posts(tag_name):
+    tag = Tag.query.filter_by(name=tag_name).first_or_404()
+    posts = tag.posts
+    return render_template('tag_posts.html', posts=posts, tag=tag)
+
 
 @app.route('/edit/<int:post_id>', methods=['GET', 'POST'])
 @login_required
@@ -304,6 +310,10 @@ def logout():
     logout_user()
     return redirect(url_for('home'))
 
+@app.route('/test')
+def test():
+    return render_template('index.html', posts=[])
+
 @app.route('/test-mail')
 @login_required
 def test_mail():
@@ -328,6 +338,10 @@ def load_user(user_id):
 with app.app_context():
     db.create_all()
 
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    app.run(debug=True)
 # --- Flask アプリの起動（Renderでは不要）---
 # if __name__ == '__main__':
 #     with app.app_context():

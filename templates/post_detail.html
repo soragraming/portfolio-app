@@ -1,31 +1,19 @@
 {% extends "layout.html" %} {% block title %}{{ post.title }}{% endblock %} {%
 block content %}
-<h2>{{ post.title }}</h2>
-<p><strong>投稿者:</strong> {{ post.user.username }}</p>
-
+<h2 class="post-title">Title: {{ post.title }}</h2>
+<p><strong>投稿者:</strong> {{ post.author.username }}</p>
+<div class="post-actions">
+  <a href="{{ url_for('edit_post', post_id=post.id) }}">📝 編集</a> |
+  <a
+    href="{{ url_for('delete_post', post_id=post.id) }}"
+    onclick="return confirm('本当に削除しますか？');"
+    >🗑 削除</a
+  >
+</div>
 <hr />
-<a href="{{ url_for('edit_post', post_id=post.id) }}">📝 編集</a> |
-<a
-  href="{{ url_for('delete_post', post_id=post.id) }}"
-  onclick="return confirm('本当に削除しますか？');"
-  >🗑 削除</a
->
 
 <p><strong>日付:</strong> {{ post.date }}</p>
 <p><strong>場所:</strong> {{ post.address }}</p>
-<p><strong>感想:</strong><br />{{ post.description }}</p>
-
-<!-- 例：タグ表示エリア -->
-{% if post.tags %}
-<div class="mt-4">
-  <h5>タグ:</h5>
-  <ul class="flex flex-wrap gap-2">
-    {% for tag in post.tags %}
-    <li class="bg-blue-100 text-blue-800 px-2 py-1 rounded">{{ tag.name }}</li>
-    {% endfor %}
-  </ul>
-</div>
-{% endif %} {% if post.photos %}
 <h3>写真</h3>
 <div class="photo-gallery">
   {% for photo in post.photos %}
@@ -35,7 +23,24 @@ block content %}
   /><br /><br />
   {% endfor %}
 </div>
-{% endif %} {% if post.map_iframe %}
+<p><strong>感想:</strong><br />{{ post.description }}</p>
+
+<!-- 例：タグ表示エリア -->
+{% if post.tags %}
+<div class="mt-4">
+  <h5>タグ:</h5>
+  <ul class="flex flex-wrap gap-2">
+    {% for tag in post.tags %}
+    <a
+      href="{{ url_for('tag_posts', tag_name=tag.name) }}"
+      class="badge bg-secondary"
+      >{{ tag.name }}</a
+    >
+    {% endfor %}
+  </ul>
+</div>
+
+{% endif %} {% if post.photos %} {% endif %} {% if post.map_iframe %}
 <h3>地図</h3>
 <div class="map-container">{{ post.map_iframe | safe }}</div>
 

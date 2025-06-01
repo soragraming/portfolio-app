@@ -1,59 +1,106 @@
+:root {
+  --primary-color: #8b6f47; /* ブラウン系（サンドブラウン） */
+  --secondary-color: #a47148; /* ちょっと明るめのブラウン */
+  --accent-color: #c2b280; /* 砂っぽい色でアクセント */
+  --background-color: #f5f2eb; /* やさしいブラウン背景 */
+  --text-color: #4b3f2f; /* 落ち着いた文字色 */
+  --white: #ffffff;
+}
+
 body {
-  background-color: #9a3535;
+  background-color: var(--accent-color);
+  color: var(--text-color);
   font-family: "M PLUS Rounded 1c", "Roboto", sans-serif;
-  background-color: #f3f1eb;
-  color: #333;
-  padding: 20px;
-  line-height: 1.6;
+  margin: 0;
+  padding: 10px;
 }
 
-.main-heading {
-  font-family: "Noto Sans JP", sans-serif;
-  font-size: 2rem;
-  text-align: center;
-  margin: 1.5em 0;
-  color: #2c3e50;
+header,
+footer {
+  color: var(--white);
+  padding: 0px;
 }
 
-a {
-  color: #2e7d32;
-  text-decoration: none;
+footer {
+  background: url("../images/camouflage.png");
 }
 
-a:hover {
-  text-decoration: underline;
+nav {
+  background: url("../images/camouflage.png");
+  background-size: cover;
+  background-position: center;
+  color: var(--white);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+nav a {
+  color: var(--white);
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+nav a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 h1,
-h2 {
-  color: #2e7d32;
-  font-family: "Merriweather", Lato;
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--secondary-color);
+  font-weight: 700;
+}
+
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+a:hover {
+  color: var(--background-color);
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: var(--white);
+  border: none;
+  border-radius: 6px;
+  padding: 0.5em 1em;
+  transition: background-color 0.3s;
+}
+
+.btn-primary:hover {
+  background-color: var(--secondary-color);
+}
+
+.card-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3列固定 */
+  gap: 10px;
 }
 
 .card {
-  background-color: #fff;
+  background-color: #a3b481;
   border-radius: 10px;
-  padding: 15px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  border-left: 6px solid #81c784;
-  transition: transform 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: 1em;
+  padding: 18px;
+  border-left: 8px solid var(--primary-color);
+  transition: transform 0.5s;
+}
+.card h3 {
+  color: var(--primary-color);
+  font-size: 2em;
+  font-family: "Dela Gothic One", sans-serif;
 }
 
 .card:hover {
-  transform: scale(1.02);
-}
-
-.card img {
-  max-width: 100%;
-  border-radius: 8px;
-  margin-top: 10px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-}
-
-.post-meta {
-  font-size: 0.9em;
-  color: #666;
+  transform: translateY(-4px);
 }
 
 img {
@@ -61,19 +108,35 @@ img {
   height: auto;
   border-radius: 8px;
 }
-
-/* カードのレイアウト */
-.card {
-  background-color: #fff;
-  border-radius: 10px;
-  padding: 15px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  border-left: 6px solid #81c784;
-  transition: transform 0.2s;
+.mt-2 {
+  margin-bottom: 1em;
+}
+.read-more-btn {
+  background-color: var(--primary-color);
+  color: var(--white);
+  border-radius: 5px;
+  padding: 8px 12px;
+  display: inline-block;
+  margin-top: 10px;
+  font-weight: bold;
+  text-decoration: none;
+  transition: background-color 0.2s;
 }
 
-/* レスポンシブなギャラリー風レイアウト */
+.read-more-btn:hover {
+  color: var(--gray);
+  background-color: var(--secondary-color);
+}
+.card-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.card:hover {
+  transform: scale(1.02);
+}
+
 .photo-gallery {
   display: flex;
   flex-wrap: wrap;
@@ -87,6 +150,28 @@ img {
   object-fit: cover;
   border-radius: 8px;
 }
+
+.map-container iframe {
+  width: 100%;
+  height: 300px;
+  border: none;
+  border-radius: 10px;
+}
+
+.post-title {
+  font-family: "Dela Gothic One", sans-serif;
+  color: var(--text-color);
+  font-size: 2em;
+  margin-bottom: 10px;
+}
+
+.post-actions {
+  display: right;
+  justify-content: space-between;
+  align-items: right;
+  margin-top: 10px;
+}
+
 @media (max-width: 600px) {
   body {
     padding: 10px;
@@ -109,121 +194,5 @@ img {
   .photo-gallery {
     flex-direction: column;
     align-items: center;
-  }
-}
-.read-more-btn {
-  display: inline-block;
-  margin-top: 10px;
-  padding: 8px 12px;
-  background-color: #4caf50;
-  color: #fff;
-  border-radius: 5px;
-  text-decoration: none;
-  font-weight: bold;
-  transition: background-color 0.2s;
-}
-
-.read-more-btn:hover {
-  background-color: #006807;
-}
-.nav-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 10px 0;
-}
-
-.nav-links a {
-  color: #2e7d32;
-  text-decoration: none;
-  font-weight: bold;
-  padding: 6px 8px;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-}
-
-.nav-links a:hover {
-  background-color: #e8f5e9;
-}
-
-@media (max-width: 600px) {
-  .nav-links {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .nav-links a {
-    padding: 8px 0;
-  }
-  .profile-img {
-    width: 250px; /* 好きなサイズに調整OK */
-    height: 250px;
-    object-fit: cover; /* はみ出しを綺麗にトリミング */
-    border-radius: 50%; /* ← これで丸くなる！！ */
-    border: 2px solid #ccc; /* 任意で枠線もオシャレに */
-    display: block;
-    margin: 0 auto; /* センター寄せ */
-  }
-}
-
-.map-container iframe {
-  width: 100%;
-  height: 300px;
-  border: none;
-  border-radius: 10px;
-}
-.map-sample iframe {
-  border-radius: 10px;
-  margin-bottom: 1rem;
-}
-.navbar {
-  background: #333;
-  padding: 10px;
-  color: white;
-}
-
-.nav-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.nav-links {
-  list-style: none;
-  display: flex;
-  gap: 20px;
-}
-
-.nav-links li a {
-  color: white;
-  text-decoration: none;
-}
-
-/* ハンバーガーアイコンはスマホだけ表示 */
-.hamburger {
-  display: none;
-  font-size: 24px;
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-}
-
-/* スマホサイズでナビを縦並び＆非表示に */
-@media (max-width: 768px) {
-  .nav-links {
-    display: none;
-    flex-direction: column;
-    background: #444;
-    padding: 10px;
-  }
-
-  .nav-links.active {
-    display: flex;
-  }
-
-  .hamburger {
-    display: block;
   }
 }

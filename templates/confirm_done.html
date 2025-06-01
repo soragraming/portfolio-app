@@ -1,0 +1,6 @@
+<!-- templates/confirm_done.html -->
+{% extends "layout.html" %} {% block content %}
+<h2>メール認証が完了しました！</h2>
+<p>ログインして始めましょう。</p>
+<a href="{{ url_for('login') }}">ログイン画面へ</a>
+{% endblock %}
