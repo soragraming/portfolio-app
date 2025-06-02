@@ -22,11 +22,16 @@ app.secret_key = os.environ.get('SECRET_KEY')
 serializer = URLSafeTimedSerializer(app.secret_key)
 
 # DB設定
-basedir = os.path.abspath(os.path.dirname(__file__))
-db_path = os.path.join(basedir, 'app.db')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# 環境変数DATABASE_URLがあればそちらを使う（本番用Postgres）
+# 無ければローカルのsqliteを使う
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'app.db')
+
 db = SQLAlchemy(app)
+
+
+
 
 # メール設定
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER')
@@ -35,6 +40,7 @@ app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS') == 'True'
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
+
 
 mail = Mail(app)
 
