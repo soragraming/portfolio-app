@@ -13,8 +13,9 @@ from flask_admin.contrib.sqla import ModelView
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 import uuid
-from sqlalchemy import event
 from sqlalchemy.engine import Engine
+from sqlalchemy import event
+import sqlite3
 
 app = Flask(__name__, template_folder='templates')
 app.secret_key = os.environ.get('SECRET_KEY')
@@ -52,9 +53,10 @@ post_tags = db.Table('post_tags',
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+    if isinstance(dbapi_connection, sqlite3.Connection):  # SQLiteのみ有効
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 # モデル定義
 class User(db.Model, UserMixin):
