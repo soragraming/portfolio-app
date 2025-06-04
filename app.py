@@ -17,6 +17,8 @@ from sqlalchemy.engine import Engine
 from sqlalchemy import event
 import sqlite3
 
+print("🟢 DB接続先:", os.environ.get('DATABASE_URL'))
+
 app = Flask(__name__, template_folder='templates')
 app.secret_key = os.environ.get('SECRET_KEY')
 
