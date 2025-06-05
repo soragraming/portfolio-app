@@ -205,7 +205,7 @@ def create():
         date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
         # 文字列を「年-月-日形式の日付オブジェクト」に変換してる
         #  Flaskでフォームから受けた日付”date”は文字列になる。
-        # 　→しかしデータベースでは”Date型”として保存する。
+        # →しかしデータベースでは”Date型”として保存する。
         address = request.form['address']
         description = request.form['description']
         map_iframe = request.form.get('map_iframe')
@@ -266,19 +266,41 @@ def tag_posts(tag_name):
 @login_required
 def edit_post(post_id):
     post = Post.query.get_or_404(post_id)
-    
+
     if post.user_id != current_user.id:
-        abort(403)  # 権限がない場合は403エラー
-        
+
     if request.method == 'POST':
         post.title = request.form['title']
-        post.date = datetime.strptime(request.form['date'], "%Y-%m-%d").date() if request.form['date'] else None
-        post.address = request.form['address']
         post.description = request.form['description']
-        post.map_iframe = request.form.get('map_iframe')
+
+    delete_photo_ids = request.form.getlist('delete_photos')
+    if delete_photo_ids:
+        for photo_id in delete_photo_ids:
+            photo = Photo.query.get(photo_id)
+            if photo and photo in post.photos:
+                # 静的ファイルの削除（ファイルが存在すれば削除）
+                photo_path = os.path.join(app.root_path, 'static/uploads', photo.photo_path)
+                if os.path.exists(photo_path):
+                    os.remove(photo_path)
+                # データベースから削除
+                db.session.delete(photo)
+            try:
+                os.remove(os.path.join(app.config['UPLOAD_FOLDER'], photo.photo_path))
+            except:
+                pass
+    if 'new_photos' in request.files:
+        new_photos = request.files.getlist('new_photos')
+        for photo in new_photos:
+            if photo and allowed_file(photo.filename):
+                filename = secure_filename(photo.filename)
+                photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                photo.save(photo_path)
+                new_photo = Photo(photo_path=filename, post=post)
+                db.session.add(new_photo)
         db.session.commit()
+        flash('投稿を更新しました！', 'success')
         return redirect(url_for('post_detail', post_id=post.id))
-    
+
     return render_template('edit.html', post=post)
 
 @app.route('/delete/<int:post_id>', methods=['POST', 'GET'])
@@ -286,10 +308,10 @@ def edit_post(post_id):
 # セットで使うことで、ログインしてないとそもそもアクセスできなくなる
 def delete_post(post_id):
     post = Post.query.get_or_404(post_id)
-    
+
     if post.user_id != current_user.id:
         abort(403)
-    
+
     db.session.delete(post)
     db.session.commit()
     return redirect(url_for('home'))

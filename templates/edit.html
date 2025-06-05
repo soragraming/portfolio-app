@@ -30,8 +30,24 @@
 {{ post.description }}</textarea
   ><br /><br />
 
-  <!-- 画像は再アップロードできないようにしておく（別途機能追加もOK） -->
-  <p>※画像の再編集は未対応です</p>
+  <h3>既存の画像</h3>
+  {% for photo in post.photos %}
+  <div style="margin-bottom: 1em">
+    <img
+      src="{{ url_for('static', filename='uploads/' + photo.photo_path) }}"
+      width="200"
+    />
+    <label>
+      <input type="checkbox" name="delete_photos" value="{{ photo.id }}" />
+      この画像を削除する
+    </label>
+  </div>
+  {% endfor %}
+
+  <label
+    >新しい写真を追加:
+    <input type="file" name="new_photos" multiple />
+  </label>
 
   <button type="submit">更新する</button>
 </form>
