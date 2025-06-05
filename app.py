@@ -266,12 +266,12 @@ def tag_posts(tag_name):
 @login_required
 def edit_post(post_id):
     post = Post.query.get_or_404(post_id)
-
+    
     if post.user_id != current_user.id:
-
-    if request.method == 'POST':
-        post.title = request.form['title']
-        post.description = request.form['description']
+        
+        if request.method == 'POST':
+            post.title = request.form['title']
+            post.description = request.form['description']
 
     delete_photo_ids = request.form.getlist('delete_photos')
     if delete_photo_ids:
