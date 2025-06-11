@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-from flask import Flask, render_template, request, redirect, url_for, abort
+from flask import Flask, render_template, request, redirect, url_for, abort, flash
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from werkzeug.utils import secure_filename
@@ -20,6 +20,7 @@ import sqlite3
 print("🟢 DB接続先:", os.environ.get('DATABASE_URL'))
 
 app = Flask(__name__, template_folder='templates')
+app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.secret_key = os.environ.get('SECRET_KEY')
 
 serializer = URLSafeTimedSerializer(app.secret_key)
@@ -266,42 +267,51 @@ def tag_posts(tag_name):
 @login_required
 def edit_post(post_id):
     post = Post.query.get_or_404(post_id)
-    
-    if post.user_id != current_user.id:
-        
-        if request.method == 'POST':
-            post.title = request.form['title']
-            post.description = request.form['description']
 
-    delete_photo_ids = request.form.getlist('delete_photos')
-    if delete_photo_ids:
-        for photo_id in delete_photo_ids:
-            photo = Photo.query.get(photo_id)
-            if photo and photo in post.photos:
-                # 静的ファイルの削除（ファイルが存在すれば削除）
-                photo_path = os.path.join(app.root_path, 'static/uploads', photo.photo_path)
-                if os.path.exists(photo_path):
-                    os.remove(photo_path)
-                # データベースから削除
-                db.session.delete(photo)
-            try:
-                os.remove(os.path.join(app.config['UPLOAD_FOLDER'], photo.photo_path))
-            except:
-                pass
-    if 'new_photos' in request.files:
-        new_photos = request.files.getlist('new_photos')
-        for photo in new_photos:
-            if photo and allowed_file(photo.filename):
-                filename = secure_filename(photo.filename)
-                photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                photo.save(photo_path)
-                new_photo = Photo(photo_path=filename, post=post)
-                db.session.add(new_photo)
+    if post.user_id != current_user.id:
+        abort(403)
+
+    if request.method == 'POST':
+        post.title = request.form['title']
+        post.description = request.form['description']
+
+        delete_photo_ids = request.form.getlist('delete_photos')
+        if delete_photo_ids:
+            for photo_id in delete_photo_ids:
+                photo = Photo.query.get(photo_id)
+                if photo and photo in post.photos:
+            # 同じファイル名の画像が他に使われていないかチェック
+                 same_photo_count = Photo.query.filter(Photo.photo_path == photo.photo_path).count()
+            # ファイルのパスを作成
+            photo_path = os.path.join(app.root_path, 'static/uploads', photo.photo_path)
+            # 他に使われていなければファイルを削除
+            if same_photo_count <= 1 and os.path.exists(photo_path):
+                os.remove(photo_path)
+            # データベースからは常に削除する
+            db.session.delete(photo)
+
+
+        if 'new_photos' in request.files:
+            new_photos = request.files.getlist('new_photos')
+            for photo in new_photos:
+                if photo and allowed_file(photo.filename):
+                    filename = secure_filename(photo.filename)
+                    photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    photo.save(photo_path)
+                    new_photo = Photo(photo_path=filename, post=post)
+                    db.session.add(new_photo)
+
         db.session.commit()
         flash('投稿を更新しました！', 'success')
         return redirect(url_for('post_detail', post_id=post.id))
 
-    return render_template('edit.html', post=post)
+    return render_template('edit.html', post=post)  # ← ここでOK！
+
+# 画像拡張子のチェック関数
+def allowed_file(filename):
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 @app.route('/delete/<int:post_id>', methods=['POST', 'GET'])
 @login_required
