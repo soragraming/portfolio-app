@@ -371,11 +371,6 @@ def test_mail():
     except Exception as e:
         return f"❌ エラー: {str(e)}"
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
-
 # ✅ 最後に Flask アプリ起動。おまじないのようなもの
 with app.app_context():
     db.create_all()
