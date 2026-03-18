@@ -363,7 +363,7 @@ def test_mail():
         msg = Message(
             subject="テストメール",
             sender=app.config['MAIL_DEFAULT_SENDER'],  # ここがSendGridでVerify済アドレス
-            recipients=["ohzora0817@gmail.com"]  # ← 登録済アドレスと一致してる必要あり！
+            recipients=[os.environ.get('TEST_MAIL_RECIPIENT')]
         )
         msg.body = "これはテストメールです。"
         mail.send(msg)

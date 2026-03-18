@@ -7,4 +7,4 @@ __pycache__/
 .DS_Store
 app.db
 app_local.py
-.venv/
+.venv/.env
