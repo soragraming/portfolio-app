@@ -104,11 +104,18 @@ class Photo(db.Model):
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # 管理画面
+class AdminModelView(ModelView):
+    def is_accessible(self):
+        return current_user.is_authenticated and current_user.username == '大空'
+
+    def inaccessible_callback(self, name, **kwargs):
+        abort(403)
+
 admin = Admin(app, name='管理画面', template_mode='bootstrap3')
-admin.add_view(ModelView(User, db.session))
-admin.add_view(ModelView(Photo, db.session))
-admin.add_view(ModelView(Tag, db.session))
-admin.add_view(ModelView(Post, db.session))
+admin.add_view(AdminModelView(User, db.session))
+admin.add_view(AdminModelView(Photo, db.session))
+admin.add_view(AdminModelView(Tag, db.session))
+admin.add_view(AdminModelView(Post, db.session))
 
 # ログイン設定
 login_manager = LoginManager()
